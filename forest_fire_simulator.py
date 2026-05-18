@@ -91,16 +91,23 @@ class ForestFireSimulator:
 
         Returns:
             Tuple (carte résultante, ensemble des cases brûlées)
+
+        Raises:
+            ValueError: Si la position n'est pas valide ou n'est pas un arbre
         """
         if not self._is_valid_position(start_pos):
             raise ValueError(f"Position invalide: ({start_pos.x}, {start_pos.y})")
+
+        # Le feu ne peut démarrer que sur un arbre
+        if self.map[start_pos.y][start_pos.x] != TerrainType.TREE:
+            raise ValueError(f"Le feu ne peut démarrer que sur un arbre. La position ({start_pos.x}, {start_pos.y}) est de type {self.map[start_pos.y][start_pos.x].name}")
 
         # Copie de la carte
         fire_map = [row[:] for row in self.map]
         burned = set()
 
         # BFS pour simuler la propagation du feu
-        to_burn = [start_pos] if fire_map[start_pos.y][start_pos.x] == TerrainType.TREE else []
+        to_burn = [start_pos]
 
         while to_burn:
             current = to_burn.pop(0)
@@ -131,18 +138,28 @@ class ForestFireSimulator:
 
         Returns:
             Tuple (position optimale à déboiser, nombre de cases brûlées)
+        
+        Raises:
+            ValueError: Si la position n'est pas valide ou n'est pas un arbre
         """
         if not self._is_valid_position(fire_start_pos):
             raise ValueError(f"Position invalide: ({fire_start_pos.x}, {fire_start_pos.y})")
+        
+        if self.map[fire_start_pos.y][fire_start_pos.x] != TerrainType.TREE:
+            raise ValueError(f"Le feu doit démarrer sur un arbre. La position ({fire_start_pos.x}, {fire_start_pos.y}) est de type {self.map[fire_start_pos.y][fire_start_pos.x].name}")
 
         # Simuler sans déboisement
         _, original_burned = self.simulate_fire(fire_start_pos)
         best_clearing_pos = None
         min_burned = len(original_burned)
 
-        # Essayer de déboiser chaque arbre
+        # Essayer de déboiser chaque arbre (sauf la position du feu)
         for y in range(self.height):
             for x in range(self.width):
+                # Exclure la position de départ du feu
+                if x == fire_start_pos.x and y == fire_start_pos.y:
+                    continue
+                
                 if self.map[y][x] == TerrainType.TREE:
                     # Créer une map temporaire sans cet arbre
                     temp_map = self.map
