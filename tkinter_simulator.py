@@ -154,6 +154,13 @@ class ForestFireGUI:
                 return
 
             start_pos = Position(fire_x, fire_y)
+            
+            # Vérifier que la position est un arbre
+            terrain = self.simulator.map[fire_y][fire_x]
+            if terrain != TerrainType.TREE:
+                messagebox.showerror("Erreur", f"❌ Le feu ne peut démarrer que sur un arbre!\nLa position ({fire_x}, {fire_y}) est: {terrain.name}")
+                return
+            
             self.current_map, self.burned_positions = self.simulator.simulate_fire(start_pos)
 
             self._draw_map()
@@ -164,8 +171,8 @@ class ForestFireGUI:
             self.status_label.config(text=f"🔥 Feu simulé: {burned_count} cases brûlées ({percentage:.1f}%)")
             self.info_label.config(text=f"Cases brûlées: {burned_count} | Pourcentage: {percentage:.2f}%")
 
-        except ValueError:
-            messagebox.showerror("Erreur", "Veuillez entrer des positions valides (nombres)")
+        except ValueError as e:
+            messagebox.showerror("Erreur", str(e))
 
     def _find_best_clearing(self):
         """Trouve la meilleure case à déboiser"""
@@ -184,6 +191,12 @@ class ForestFireGUI:
             if not (0 <= fire_x < self.simulator.width and 0 <= fire_y < self.simulator.height):
                 messagebox.showerror("Erreur", "Position de feu invalide")
                 return
+            
+            # Vérifier que c'est un arbre
+            terrain = self.simulator.map[fire_y][fire_x]
+            if terrain != TerrainType.TREE:
+                messagebox.showerror("Erreur", f"❌ Le feu doit démarrer sur un arbre!\nLa position ({fire_x}, {fire_y}) est: {terrain.name}")
+                return
 
             self.status_label.config(text="⏳ Recherche en cours (peut prendre du temps)...")
             self.root.update()
@@ -197,15 +210,15 @@ class ForestFireGUI:
                 reduction = original_burned - min_burned
 
                 self.status_label.config(text=f"✅ Déboisement trouvé: ({self.best_clearing_pos.x}, {self.best_clearing_pos.y})")
-                self.info_label.config(text=f"Avant: {original_burned} brûlées | Après: {min_burned} brûlées | Réduction: {reduction}")
+                self.info_label.config(text=f"Avant: {original_burned} brûlées | Après: {min_burned} brûlées | Réduction: {reduction} (note: la case du feu est exclue)")
 
                 self._draw_map()
 
             thread = threading.Thread(target=search_thread, daemon=True)
             thread.start()
 
-        except ValueError:
-            messagebox.showerror("Erreur", "Veuillez entrer des positions valides")
+        except ValueError as e:
+            messagebox.showerror("Erreur", str(e))
 
     def _export_html(self):
         """Exporte le résultat en HTML"""
