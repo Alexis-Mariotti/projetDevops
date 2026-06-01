@@ -33,7 +33,7 @@ class TestClearingOptimization:
         # Vérifier que start_pos a bien été trouvé
         assert start_pos is not None, "Aucun arbre trouvé sur la carte"
 
-        best_pos, min_burned = sim.find_best_clearing(start_pos)
+        best_pos, min_burned, all_saved_pos = sim.find_best_clearing(start_pos)
 
         # Si best_pos est None, cela signifie qu'aucune autre position d'arbre n'a été trouvée
         # Ce qui est acceptable pour un test
@@ -74,7 +74,7 @@ class TestClearingOptimization:
         _, original_burned = sim.simulate_fire(start_pos)
 
         # Trouver la meilleure case à déboiser
-        best_pos, min_burned = sim.find_best_clearing(start_pos)
+        best_pos, min_burned, all_saved_pos = sim.find_best_clearing(start_pos)
 
         # Avec la meilleure case déboiseé, les dégâts devraient être <= aux dégâts originaux
         assert min_burned <= len(original_burned)

@@ -17,8 +17,9 @@ class ForestFireGUI:
     COLORS = {
         TerrainType.WATER: '#64B5F6',   # Bleu
         TerrainType.BARE: '#D4AF37',    # Or/désert
-        TerrainType.TREE: '#2E8B57',    # Vert
+        TerrainType.TREE: '#2E8B57',    # Vert foncé
         TerrainType.BURNED: '#8B4513',  # Marron
+        TerrainType.SAVED: '#90EE90',   # Vert clair
     }
 
     CELL_SIZE = 20  # Taille d'une cellule en pixels
@@ -26,12 +27,13 @@ class ForestFireGUI:
     def __init__(self, root):
         """Initialise l'interface graphique"""
         self.root = root
-        self.root.title("🔥 Simulateur de Feu de Forêt 🔥")
+        self.root.title("Simulateur de Feu de Forêt")
         self.root.geometry("900x750")
 
         self.simulator = None
         self.current_map = None
         self.burned_positions = set()
+        self.saved_positions = set()
         self.best_clearing_pos = None
         self.canvas = None
         self.simulation_running = False
@@ -113,7 +115,7 @@ class ForestFireGUI:
         info_bottom_frame = tk.Frame(self.root, bg='#f0f0f0')
         info_bottom_frame.pack(fill=tk.X, padx=10, pady=5)
 
-        self.info_label = tk.Label(info_bottom_frame, text="💡 Commencez par générer une carte (une position de feu aléatoire sera choisie)",
+        self.info_label = tk.Label(info_bottom_frame, text="Commencez par générer une carte (une position de feu aléatoire sera choisie)",
                                    bg='#f0f0f0', fg='#666', font=('Arial', 9))
         self.info_label.pack(anchor=tk.W)
 
@@ -131,6 +133,7 @@ class ForestFireGUI:
             self.simulator = ForestFireSimulator(width, height, tree_percent)
             self.current_map = [row[:] for row in self.simulator.map]
             self.burned_positions = set()
+            self.saved_positions = set()
             self.best_clearing_pos = None
 
             # Chercher une position d'arbre aléatoire pour le feu
@@ -176,17 +179,18 @@ class ForestFireGUI:
             # Vérifier que la position est un arbre
             terrain = self.simulator.map[fire_y][fire_x]
             if terrain != TerrainType.TREE:
-                messagebox.showerror("Erreur", f"❌ Le feu ne peut démarrer que sur un arbre!\nLa position ({fire_x}, {fire_y}) est: {terrain.name}")
+                messagebox.showerror("Erreur", f"Le feu ne peut démarrer que sur un arbre!\nLa position ({fire_x}, {fire_y}) est: {terrain.name}")
                 return
             
             self.current_map, self.burned_positions = self.simulator.simulate_fire(start_pos)
+            self.saved_positions = set()  # Réinitialiser les positions sauvées
 
             self._draw_map()
             burned_count = len(self.burned_positions)
             total = self.simulator.width * self.simulator.height
             percentage = (burned_count / total) * 100
 
-            self.status_label.config(text=f"🔥 Feu simulé: {burned_count} cases brûlées ({percentage:.1f}%)")
+            self.status_label.config(text=f"Feu simulé: {burned_count} cases brûlées ({percentage:.1f}%)")
             self.info_label.config(text=f"Cases brûlées: {burned_count} | Pourcentage: {percentage:.2f}%")
 
         except ValueError as e:
@@ -213,22 +217,22 @@ class ForestFireGUI:
             # Vérifier que c'est un arbre
             terrain = self.simulator.map[fire_y][fire_x]
             if terrain != TerrainType.TREE:
-                messagebox.showerror("Erreur", f"❌ Le feu doit démarrer sur un arbre!\nLa position ({fire_x}, {fire_y}) est: {terrain.name}")
+                messagebox.showerror("Erreur", f"Le feu doit démarrer sur un arbre!\nLa position ({fire_x}, {fire_y}) est: {terrain.name}")
                 return
 
-            self.status_label.config(text="⏳ Recherche en cours (peut prendre du temps)...")
+            self.status_label.config(text="Recherche en cours (peut prendre du temps)...")
             self.root.update()
 
             # Exécuter dans un thread pour ne pas bloquer l'UI
             def search_thread():
                 start_pos = Position(fire_x, fire_y)
-                self.best_clearing_pos, min_burned = self.simulator.find_best_clearing(start_pos)
+                self.best_clearing_pos, min_burned, self.saved_positions = self.simulator.find_best_clearing(start_pos)
 
                 original_burned = len(self.burned_positions)
                 reduction = original_burned - min_burned
 
-                self.status_label.config(text=f"✅ Déboisement trouvé: ({self.best_clearing_pos.x}, {self.best_clearing_pos.y})")
-                self.info_label.config(text=f"Avant: {original_burned} brûlées | Après: {min_burned} brûlées | Réduction: {reduction} (note: la case du feu est exclue)")
+                self.status_label.config(text=f"Déboisement trouvé: ({self.best_clearing_pos.x}, {self.best_clearing_pos.y})")
+                self.info_label.config(text=f"Avant: {original_burned} brûlées | Après: {min_burned} brûlées | Réduction: {reduction} | Sauvés: {len(self.saved_positions)}", fg="green")
 
                 self._draw_map()
 
@@ -254,10 +258,11 @@ class ForestFireGUI:
                 file_path,
                 self.current_map if self.current_map else self.simulator.map,
                 self.burned_positions if self.burned_positions else None,
-                self.best_clearing_pos
+                self.best_clearing_pos,
+                self.saved_positions if self.saved_positions else None
             )
             messagebox.showinfo("Succès", f"Fichier exporté: {file_path}")
-            self.status_label.config(text=f"💾 Exported: {file_path}")
+            self.status_label.config(text=f"Exported: {file_path}")
 
     def _draw_map(self):
         """Dessine la carte sur le canvas"""
@@ -290,6 +295,13 @@ class ForestFireGUI:
 
                 # Rectangle pour la cellule
                 self.canvas.create_rectangle(x0, y0, x1, y1, fill=color, outline='#999', width=1)
+
+                # Afficher les arbres sauvés en vert clair
+                if Position(x, y) in self.saved_positions:
+                    self.canvas.create_rectangle(x0, y0, x1, y1, fill='#90EE90', outline='#999', width=1)
+                    # Symbole pour les arbres sauvés
+                    self.canvas.create_text(x0 + self.CELL_SIZE//2, y0 + self.CELL_SIZE//2,
+                                        fill='#228B22', font=('Arial', 10, 'bold'))
 
                 # Indiquer la position de départ du feu avec une couleur/overlay différente
                 if start_pos and Position(x, y) == start_pos:

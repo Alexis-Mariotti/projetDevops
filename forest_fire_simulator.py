@@ -16,6 +16,7 @@ class TerrainType(Enum):
     BARE = 1        # Terrain nu
     TREE = 2        # Arbre
     BURNED = 3      # Terrain brûlé
+    SAVED = 4       # Arbre sauvé par l'optimisation
 
 
 @dataclass
@@ -129,7 +130,7 @@ class ForestFireSimulator:
 
         return fire_map, burned
 
-    def find_best_clearing(self, fire_start_pos: Position) -> Tuple[Position, int]:
+    def find_best_clearing(self, fire_start_pos: Position) -> Tuple[Position, int, Set[Position]]:
         """
         Trouve la meilleure case d'arbre à déboiser pour minimiser l'incendie
 
@@ -137,8 +138,8 @@ class ForestFireSimulator:
             fire_start_pos: Position de départ du feu
 
         Returns:
-            Tuple (position optimale à déboiser, nombre de cases brûlées)
-        
+            Tuple (position optimale à déboiser, nombre de cases brûlées, ensemble des positions sauvées)
+
         Raises:
             ValueError: Si la position n'est pas valide ou n'est pas un arbre
         """
@@ -152,6 +153,7 @@ class ForestFireSimulator:
         _, original_burned = self.simulate_fire(fire_start_pos)
         best_clearing_pos = None
         min_burned = len(original_burned)
+        best_burned_with_clearing = set()
 
         # Essayer de déboiser chaque arbre (sauf la position du feu)
         for y in range(self.height):
@@ -178,11 +180,16 @@ class ForestFireSimulator:
                     if burned_count < min_burned:
                         min_burned = burned_count
                         best_clearing_pos = Position(x, y)
+                        best_burned_with_clearing = burned
 
-        return best_clearing_pos, min_burned
+        # Calculer les arbres sauvés (brûlés sans déboisement mais pas avec)
+        saved_positions = original_burned - best_burned_with_clearing
+
+        return best_clearing_pos, min_burned, saved_positions
 
     def export_to_html(self, output_file: str, fire_map: List[List[TerrainType]] = None,
-                       burned_positions: Set[Position] = None, clearing_pos: Position = None):
+                       burned_positions: Set[Position] = None, clearing_pos: Position = None,
+                       saved_positions: Set[Position] = None):
         """
         Exporte la carte en HTML pour visualisation
 
@@ -191,6 +198,7 @@ class ForestFireSimulator:
             fire_map: Carte après incendie (optionnel)
             burned_positions: Ensemble des positions brûlées (optionnel)
             clearing_pos: Position du déboisement optimal (optionnel)
+            saved_positions: Ensemble des positions d'arbres sauvés (optionnel)
         """
         html_content = f"""<!DOCTYPE html>
 <html lang="fr">
@@ -252,11 +260,15 @@ class ForestFireSimulator:
             color: white;
         }}
         .clearing {{
-            background-color: #FFD700;
-            color: red;
-            border: 3px solid red;
-        }}
-        .legend {{
+             background-color: #FFD700;
+             color: red;
+             border: 3px solid red;
+         }}
+         .saved {{
+             background-color: #90EE90;
+             color: #2E8B57;
+         }}
+         .legend {{
             margin-top: 20px;
             padding: 15px;
             background-color: #f9f9f9;
@@ -279,7 +291,7 @@ class ForestFireSimulator:
 </head>
 <body>
     <div class="container">
-        <h1>🔥 Simulateur de Feu de Forêt 🔥</h1>
+        <h1>Simulateur de Feu de Forêt</h1>
         
         <div class="info">
             <p><strong>Dimensions:</strong> {self.width}x{self.height}</p>
@@ -303,6 +315,9 @@ class ForestFireSimulator:
                 if clearing_pos and pos == clearing_pos:
                     css_class = "clearing"
                     symbol = "✂️"
+                elif saved_positions and pos in saved_positions:
+                    css_class = "saved"
+                    symbol = "🌲"
                 elif terrain == TerrainType.WATER:
                     css_class = "water"
                     symbol = "💧"
@@ -333,33 +348,37 @@ class ForestFireSimulator:
             html_content += "        </div>\n"
 
         html_content += """
-        <div class="legend">
-            <h2>Légende</h2>
-            <div class="legend-item">
-                <div class="legend-box water"></div>
-                <span>💧 Plan d'eau</span>
-            </div>
-            <div class="legend-item">
-                <div class="legend-box bare"></div>
-                <span>∘ Terrain nu</span>
-            </div>
-            <div class="legend-item">
-                <div class="legend-box tree"></div>
-                <span>🌲 Arbre</span>
-            </div>
-            <div class="legend-item">
-                <div class="legend-box burned"></div>
-                <span>🔥 Terrain brûlé</span>
-            </div>
-            <div class="legend-item">
-                <div class="legend-box clearing"></div>
-                <span>✂️ Case à déboiser (optimale)</span>
-            </div>
-        </div>
-    </div>
-</body>
-</html>
-"""
+         <div class="legend">
+             <h2>Légende</h2>
+             <div class="legend-item">
+                 <div class="legend-box water"></div>
+                 <span>Plan d'eau</span>
+             </div>
+             <div class="legend-item">
+                 <div class="legend-box bare"></div>
+                 <span>Terrain nu</span>
+             </div>
+             <div class="legend-item">
+                 <div class="legend-box tree"></div>
+                 <span>Arbre</span>
+             </div>
+             <div class="legend-item">
+                 <div class="legend-box burned"></div>
+                 <span>Terrain brûlé</span>
+             </div>
+             <div class="legend-item">
+                 <div class="legend-box clearing"></div>
+                 <span>Case à déboiser (optimale)</span>
+             </div>
+             <div class="legend-item">
+                 <div class="legend-box saved"></div>
+                 <span>Arbre sauvé par l'optimisation</span>
+             </div>
+         </div>
+     </div>
+ </body>
+ </html>
+ """
 
         with open(output_file, 'w', encoding='utf-8') as f:
             f.write(html_content)
@@ -367,6 +386,24 @@ class ForestFireSimulator:
     def _is_valid_position(self, pos: Position) -> bool:
         """Vérifie si une position est valide"""
         return 0 <= pos.x < self.width and 0 <= pos.y < self.height
+
+    def generate_map_with_saved(self, fire_map: List[List[TerrainType]],
+                                saved_positions: Set[Position]) -> List[List[TerrainType]]:
+        """
+        Génère une carte avec les arbres sauvés marqués
+
+        Args:
+            fire_map: Carte avec les terrains brûlés
+            saved_positions: Positions des arbres sauvés
+
+        Returns:
+            Carte avec les arbres sauvés marqués comme TerrainType.SAVED
+        """
+        map_to_display = [row[:] for row in fire_map]
+        for pos in saved_positions:
+            if 0 <= pos.x < self.width and 0 <= pos.y < self.height:
+                map_to_display[pos.y][pos.x] = TerrainType.SAVED
+        return map_to_display
 
 
 if __name__ == '__main__':
