@@ -46,7 +46,7 @@ class TestHTMLExport:
                     break
 
         fire_map, burned = sim.simulate_fire(start_pos)
-        best_pos, _ = sim.find_best_clearing(start_pos)
+        best_pos, min_burned, all_saved_pos = sim.find_best_clearing(start_pos)
 
         with tempfile.TemporaryDirectory() as tmpdir:
             output_file = os.path.join(tmpdir, 'test_with_fire.html')
