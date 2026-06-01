@@ -6,6 +6,7 @@ Permet la visualisation interactive et la simulation en temps réel
 import tkinter as tk
 from tkinter import messagebox, filedialog
 import threading
+import random
 from forest_fire_simulator import ForestFireSimulator, Position, TerrainType
 
 
@@ -74,8 +75,8 @@ class ForestFireGUI:
 
         # Position du feu
         tk.Label(sim_frame, text="Position feu (x,y):", bg='#f0f0f0').grid(row=0, column=0, sticky=tk.W, padx=5)
-        self.fire_x_var = tk.StringVar(value="15")
-        self.fire_y_var = tk.StringVar(value="15")
+        self.fire_x_var = tk.StringVar(value="")
+        self.fire_y_var = tk.StringVar(value="")
         tk.Spinbox(sim_frame, from_=0, to=50, textvariable=self.fire_x_var, width=5).grid(row=0, column=1, sticky=tk.W)
         tk.Label(sim_frame, text=",", bg='#f0f0f0').grid(row=0, column=2)
         tk.Spinbox(sim_frame, from_=0, to=50, textvariable=self.fire_y_var, width=5).grid(row=0, column=3, sticky=tk.W, padx=5)
@@ -112,7 +113,7 @@ class ForestFireGUI:
         info_bottom_frame = tk.Frame(self.root, bg='#f0f0f0')
         info_bottom_frame.pack(fill=tk.X, padx=10, pady=5)
 
-        self.info_label = tk.Label(info_bottom_frame, text="Cliquez sur 'Générer Carte' pour commencer",
+        self.info_label = tk.Label(info_bottom_frame, text="💡 Commencez par générer une carte (une position de feu aléatoire sera choisie)",
                                    bg='#f0f0f0', fg='#666', font=('Arial', 9))
         self.info_label.pack(anchor=tk.W)
 
@@ -132,9 +133,26 @@ class ForestFireGUI:
             self.burned_positions = set()
             self.best_clearing_pos = None
 
+            # Chercher une position d'arbre aléatoire pour le feu
+            tree_positions = []
+            for y in range(height):
+                for x in range(width):
+                    if self.simulator.map[y][x] == TerrainType.TREE:
+                        tree_positions.append((x, y))
+
+            # Si des arbres trouvés, en sélectionner un aléatoirement
+            if tree_positions:
+                fire_x, fire_y = random.choice(tree_positions)
+                self.fire_x_var.set(str(fire_x))
+                self.fire_y_var.set(str(fire_y))
+            else:
+                # Fallback si aucun arbre (très peu probable)
+                self.fire_x_var.set("0")
+                self.fire_y_var.set("0")
+
             self._draw_map()
             self.status_label.config(text=f"✅ Carte générée: {width}x{height}")
-            self.info_label.config(text=f"Carte: {width}x{height} | Arbres: {tree_percent}%")
+            self.info_label.config(text=f"Carte: {width}x{height} | Arbres: {tree_percent}% | Position feu aléatoire: ({self.fire_x_var.get()}, {self.fire_y_var.get()})")
 
         except ValueError:
             messagebox.showerror("Erreur", "Veuillez entrer des valeurs valides")

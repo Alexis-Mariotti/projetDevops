@@ -370,6 +370,7 @@ class ForestFireSimulator:
 
 
 if __name__ == '__main__':
+    """Main pour tester le simulateur séparement de l'UI"""
     # Exemple d'utilisation
     simulator = ForestFireSimulator(width=20, height=20, tree_percentage=30)
 
