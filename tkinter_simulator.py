@@ -268,6 +268,16 @@ class ForestFireGUI:
 
         map_to_draw = self.current_map if self.current_map else self.simulator.map
 
+        # Déterminer la position de départ du feu
+        start_pos = None
+        try:
+            sx = int(self.fire_x_var.get()) if self.fire_x_var.get() != "" else None
+            sy = int(self.fire_y_var.get()) if self.fire_y_var.get() != "" else None
+            if sx is not None and sy is not None and 0 <= sx < self.simulator.width and 0 <= sy < self.simulator.height:
+                start_pos = Position(sx, sy)
+        except Exception:
+            start_pos = None
+
         for y in range(self.simulator.height):
             for x in range(self.simulator.width):
                 terrain = map_to_draw[y][x]
@@ -280,6 +290,13 @@ class ForestFireGUI:
 
                 # Rectangle pour la cellule
                 self.canvas.create_rectangle(x0, y0, x1, y1, fill=color, outline='#999', width=1)
+
+                # Indiquer la position de départ du feu avec une couleur/overlay différente
+                if start_pos and Position(x, y) == start_pos:
+                    # petit cercle au centre pour marquer le départ
+                    pad = max(2, self.CELL_SIZE // 6)
+                    self.canvas.create_oval(x0 + pad, y0 + pad, x1 - pad, y1 - pad,
+                                            fill='#FF4500', outline='black')
 
                 # Symbole pour meilleure position de déboisement
                 if self.best_clearing_pos and Position(x, y) == self.best_clearing_pos:
