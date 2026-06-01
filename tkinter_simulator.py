@@ -228,7 +228,7 @@ class ForestFireGUI:
                 reduction = original_burned - min_burned
 
                 self.status_label.config(text=f"✅ Déboisement trouvé: ({self.best_clearing_pos.x}, {self.best_clearing_pos.y})")
-                self.info_label.config(text=f"Avant: {original_burned} brûlées | Après: {min_burned} brûlées | Réduction: {reduction} (note: la case du feu est exclue)")
+                self.info_label.config(text=f"Avant: {original_burned} brûlées | Après: {min_burned} brûlées | Réduction: {reduction} (note: la case du feu est exclue)", fg="red")
 
                 self._draw_map()
 
