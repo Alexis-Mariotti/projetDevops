@@ -34,8 +34,13 @@ pytest -v
 
 ### Exécuter les tests avec rapport de couverture
 
+Afficher rapport de couveture resumé dans le terminal
 ```bash
-pytest --cov=. --cov-report=html
+pytest --cov=.
 ```
 
+Pour generer une version html du rapport de couverture
+```bash
+pytest --cov-report=html
+```
 
