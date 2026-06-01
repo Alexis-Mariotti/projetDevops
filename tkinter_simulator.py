@@ -63,7 +63,7 @@ class ForestFireGUI:
 
         # Pourcentage d'arbres
         tk.Label(params_frame, text="% Arbres:", bg='#f0f0f0').grid(row=0, column=4, sticky=tk.W, padx=5)
-        self.tree_percent_var = tk.StringVar(value="35")
+        self.tree_percent_var = tk.StringVar(value="45")
         tk.Spinbox(params_frame, from_=0, to=100, textvariable=self.tree_percent_var, width=5).grid(row=0, column=5, sticky=tk.W, padx=5)
 
         # Bouton générer
