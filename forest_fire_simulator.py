@@ -62,10 +62,10 @@ class ForestFireSimulator:
             row = []
             for x in range(self.width):
                 rand = random.random() * 100
-                if rand < 5:  # 5% de chance d'avoir de l'eau
-                    row.append(TerrainType.WATER)
-                elif rand < (5 + self.tree_percentage):  # Ajout du pourcentage d'arbres
+                if rand < self.tree_percentage: # Ajout du pourcentage d'arbres
                     row.append(TerrainType.TREE)
+                elif rand < (self.tree_percentage + 5): # 5% de chance d'avoir de l'eau
+                    row.append(TerrainType.WATER)
                 else:  # Terrain nu
                     row.append(TerrainType.BARE)
             self.map.append(row)
@@ -85,8 +85,8 @@ class ForestFireSimulator:
 
     def simulate_fire(self, start_pos: Position) -> Tuple[List[List[TerrainType]], Set[Position]]:
         """
-        Simule la progression du feu à partir d'une position donnée
-
+        Simule la progression du feu à partir d'une position donnée.
+        Si un arbre est à coté d'une case d'eau, il ne brule pas
         Args:
             start_pos: Position de départ du feu
 
@@ -118,6 +118,14 @@ class ForestFireSimulator:
 
             # Le feu ne se propage que sur les arbres
             if fire_map[current.y][current.x] != TerrainType.TREE:
+                continue
+
+            # Le feu ne se propage pas sur les arbres au bord de l'eau
+            is_near_watter = False
+            for neighbor in self.get_neighbors(current):
+                if fire_map[neighbor.y][neighbor.x] == TerrainType.WATER:
+                    is_near_watter = True
+            if is_near_watter:
                 continue
 
             burned.add(current)
