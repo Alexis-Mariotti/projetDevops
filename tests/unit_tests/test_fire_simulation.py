@@ -67,3 +67,43 @@ class TestFireSimulation:
         assert Position(0, 2) in burned
         assert Position(2, 2) in burned
 
+    def test_fire_not_spreads_if_watter_in_neighbors(self):
+        """Teste que le feu ne se propage pas sur les arbres au bord de l'eau"""
+        sim = ForestFireSimulator(3, 3, 0)
+        # Setup une carte maîtrisée
+        sim.map = [
+            [TerrainType.TREE, TerrainType.TREE, TerrainType.WATER],
+            [TerrainType.TREE, TerrainType.TREE, TerrainType.TREE],
+            [TerrainType.TREE, TerrainType.TREE, TerrainType.TREE],
+        ]
+
+        start_pos = Position(0, 0)
+        fire_map, burned = sim.simulate_fire(start_pos)
+
+        # Le feu au centre devrait se propager aux diagonales
+        assert Position(0, 0) in burned
+        assert Position(0, 1) in burned
+        assert Position(0, 2) in burned
+        assert Position(1, 2) in burned
+        assert Position(2, 2) in burned
+        assert fire_map[0][1] == TerrainType.TREE
+        assert fire_map[1][1] == TerrainType.TREE
+        assert fire_map[1][2] == TerrainType.TREE
+
+    def test_burner_is_same_as_terrain(self):
+        """Teste que les cases brulé renvoyé par la variable burned et l'etat du terrain sont bien les memes"""
+        sim = ForestFireSimulator(3, 3, 0)
+        # Setup une carte maîtrisée
+        sim.map = [
+            [TerrainType.TREE, TerrainType.BARE, TerrainType.TREE],
+            [TerrainType.BARE, TerrainType.TREE, TerrainType.BARE],
+            [TerrainType.TREE, TerrainType.BARE, TerrainType.TREE],
+        ]
+
+        start_pos = Position(1, 1)
+        fire_map, burned = sim.simulate_fire(start_pos)
+
+        # on verifie que les cases de burned sont bien burned
+        for position in burned:
+            assert fire_map[position.y][position.x] == TerrainType.BURNED
+
